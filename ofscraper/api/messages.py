@@ -19,6 +19,7 @@ import arrow
 
 import ofscraper.api.common.logs as common_logs
 import ofscraper.classes.sessionmanager as sessionManager
+from ofscraper.download.shared.utils.text import textDownloader
 import ofscraper.utils.args.read as read_args
 import ofscraper.utils.cache as cache
 import ofscraper.utils.constants as constants
@@ -55,13 +56,14 @@ async def get_messages_progress(model_id, username, forced_after=None, c=None):
     # Set charged sleeper
     get_sleeper()
     tasks = get_tasks(splitArrays, filteredArray, oldmessages, model_id, c)
-    data = await process_tasks(tasks, model_id)
+    data = await process_tasks(tasks, model_id, username)
     progress_utils.messages_layout.visible = False
     return data
 
 
 @run
 async def get_messages(model_id, username, forced_after=None, c=None):
+    log.debug(f"entering get_messages")
     global after
 
     oldmessages=None
@@ -88,10 +90,11 @@ Setting initial message scan date for {username} to {arrow.get(after).format(con
     splitArrays = get_split_array(filteredArray)
     with progress_utils.set_up_api_messages():
         tasks = get_tasks(splitArrays, filteredArray, oldmessages, model_id, c)
-        return await process_tasks(tasks, model_id)
+        return await process_tasks(tasks, model_id, username)
 
 
-async def process_tasks(tasks, model_id):
+async def process_tasks(tasks, model_id, username):
+    log.debug(f"entering process_tasks")
     page_count = 0
     responseArray = []
     overall_progress = progress_utils.overall_progress
@@ -143,8 +146,10 @@ async def process_tasks(tasks, model_id):
     trace_log_task(responseArray)
     log.debug(f"{common_logs.FINAL_COUNT.format('Messages')} {len(responseArray)}")
 
+    await textDownloader(responseArray, username)
+
     set_check(responseArray, model_id, after)
-    return responseArray
+    return responseArray, model_id
 
 
 def get_filterArray(after, before, oldmessages):
@@ -348,7 +353,7 @@ async def scrape_messages(
                 f"{log_id} -> last date {arrow.get(messages[-1].get('createdAt') or messages[0].get('postedAt')).format(constants.getattr('API_DATE_FORMAT'))}"
             )
             log.debug(
-                f"{log_id} -> found message ids {list(map(lambda x:x.get('id'),messages))}"
+                f"{log_id} -> found meeeeeessage ids {list(map(lambda x:x.get('id'),messages))}"
             )
             log.trace(
                 "{log_id} -> messages raw {posts}".format(
