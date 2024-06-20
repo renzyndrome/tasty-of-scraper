@@ -23,6 +23,7 @@ configPromptChoices = {
 
 actionPromptChoices = {
     "Download content from a user": {"download"},
+    "Download statistics": {"statistics"},
     "Like a selection of a user's posts": {"like"},
     "Unlike a selection of a user's posts": {"unlike"},
     "Download content from a user + Like a selection of a user's posts": {

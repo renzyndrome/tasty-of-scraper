@@ -83,6 +83,7 @@ def get_request_auth_deviint(forced=None):
                 [static_param, fmt, checksum_indexes, checksum_constant],
                 expire=constants.getattr("HOURLY_EXPIRY"),
             )
+            print("Deviint working")
             return (static_param, fmt, checksum_indexes, checksum_constant)
 
 
@@ -111,6 +112,7 @@ def get_request_auth_sneaky(forced=None):
                 [static_param, fmt, checksum_indexes, checksum_constant],
                 expire=constants.getattr("HOURLY_EXPIRY"),
             )
+            print("Sneaky working")
             return (static_param, fmt, checksum_indexes, checksum_constant)
 
 
@@ -139,6 +141,7 @@ def get_request_auth_digitalcriminals(forced=None):
                 [static_param, fmt, checksum_indexes, checksum_constant],
                 expire=constants.getattr("HOURLY_EXPIRY"),
             )
+            print("digitalcrim working")
             return (static_param, fmt, checksum_indexes, checksum_constant)
 
 
@@ -198,4 +201,33 @@ def create_sign(link, headers):
     final_sign = content["format"].format(sha_1_sign, abs(checksum))
 
     headers.update({"sign": final_sign, "time": time2})
+    test_dynamic_rules()
     return headers
+
+import requests
+
+def test_dynamic_rules():
+    urls = {
+        "DIGITALCRIMINALS": "https://raw.githubusercontent.com/DATAHOARDERS/dynamic-rules/main/onlyfans.json",
+        "DEVIINT": "https://raw.githubusercontent.com/deviint/onlyfans-dynamic-rules/main/dynamicRules.json",
+        "SNEAKY": "https://raw.githubusercontent.com/SneakyOvis/onlyfans-dynamic-rules/main/rules.json"
+    }
+    
+    results = {}
+    for name, url in urls.items():
+        try:
+            response = requests.get(url)
+            response.raise_for_status()  # Will raise an exception for HTTP errors
+            data = response.json()  # Try to parse JSON to ensure it's a valid JSON
+            results[name] = "Working"
+        except Exception as e:
+            results[name] = f"Failed: {str(e)}"
+    
+    return results
+
+def get_active_rules_source():
+    results = test_dynamic_rules()
+    for source, status in results.items():
+        if status == "Working":
+            return source
+    raise Exception("No dynamic rules sources are working.")

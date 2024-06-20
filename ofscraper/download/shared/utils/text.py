@@ -13,6 +13,8 @@ from ofscraper.utils.paths.common import get_save_location
 
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+from bs4 import BeautifulSoup
+
 
 def init_google_sheets():
     scope = ["https://spreadsheets.google.com/feeds", 'https://www.googleapis.com/auth/spreadsheets', "https://www.googleapis.com/auth/drive.file", "https://www.googleapis.com/auth/drive"]
@@ -20,6 +22,31 @@ def init_google_sheets():
     client = gspread.authorize(creds)
     sheet = client.open_by_key('1FPEJtn4MLfm0w3kLfefZxvG9hrNo0jrM-G8v-g7O3QA').sheet1
     return sheet
+
+from bs4 import BeautifulSoup
+import re
+
+
+def clean_html(raw_html):
+    """
+    Removes only <br> and </br> tags from the given HTML string, keeping all other elements intact.
+
+    Args:
+    raw_html (str): String containing HTML.
+
+    Returns:
+    str: String with <br> and </br> tags removed.
+    """
+    soup = BeautifulSoup(raw_html, "html.parser")
+    
+    # Remove all <br> tags
+    for br in soup.find_all('br'):
+        br.decompose()
+    
+    # Convert the soup object back to text
+    clean_text = str(soup)
+    
+    return clean_text
 
 @run
 async def textDownloader(objectdicts, username=None):
@@ -45,9 +72,12 @@ async def textDownloader(objectdicts, username=None):
                 # Parse the ISO format date and reformat it
                 date = datetime.strptime(e['createdAt'], "%Y-%m-%dT%H:%M:%S%z")
                 formatted_date = date.strftime("%B %d, %Y %I:%M %p")
+
+                # Clean the HTML content in the text
+                clean_text = clean_html(e['text'])
                 
-                text = e['text']
-                data_batch.append([formatted_date, username, text])
+                # text = e['text']
+                data_batch.append([formatted_date, username, clean_text])
                 
                 # Check if the batch size is reached
                 if len(data_batch) >= batch_size:
