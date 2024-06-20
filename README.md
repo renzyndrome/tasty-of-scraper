@@ -1,8 +1,34 @@
 # ReadMe
 
-## Releases
+## Getting Started
 
-[Releases Page](https://pypi.org/project/ofscraper/#history)
+1. **Create and activate a virtual environment:**
+
+    For Mac/Linux:
+    ```bash
+    python3 -m venv venv
+    source venv/bin/activate
+    ```
+
+    For Windows
+    ```bash
+    python -m venv venv
+    venv\Scripts\activate
+    ```
+2. Install dependencies
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Add the required extension to Firefox
+   --extension
+   
+5. Run the following command in the terminal
+   ```bash
+   ofscraper
+   ```
+
+
+
 
 ```Text
 
@@ -51,52 +77,7 @@ For detailed instructions on:
 
 [Official Documention](https://of-scraper.gitbook.io/of-scraper)
 
-<h3>DISCLAIMERS:</h3>
-<ol>
-    <li>
-        This tool is not affiliated, associated, or partnered with OnlyFans in any way. We are not authorized, endorsed, or sponsored by OnlyFans. All OnlyFans trademarks remain the property of Fenix International Limited.
-    </li>
-    <li>
-        This is a theoritical program only and is for educational purposes. If you choose to use it then it may or may not work. You solely accept full responsability and indemnify the creator, hostors, contributors and all other involved persons from any any all responsability.
-    </li>
-</ol>
 
-## Issues
-
-Open a issue in this repo, or you can mention your issue in the [Discord](#discord)
-
-### Private Reports
-
-A ticket can be created in the ticket channel
-only you and admins have access to ticket discussions
-
-## Feature Requests
-
-[ClearFlask Feedback](https://ofscraper.clearflask.com/feedback) or [Discord](#discord)
-
-## Migrating from DC script
-
-To maintain compatibility with your current folders, make sure to modify the metadata option within the config file. Additionally, configure the save_path, dir_path, and filename settings to generate outputs that align with your existing setup.
-
-The inherited metadata files from DIGITALCRIMINALS' script play a crucial role in preventing redundant downloads by acting as a check for duplicates.
-
-For comprehensive guidance on making these adjustments, you can refer to the provided resources
-
-1. [Migration Guide](https://of-scraper.gitbook.io/of-scraper/migrating-from-digitalcriminals-script)
-2. [Config Options](https://of-scraper.gitbook.io/of-scraper/config-options)
-3. [Customize Save Path](https://of-scraper.gitbook.io/of-scraper/config-options/customizing-save-path)
-
-Ask in the discord or open an issue if you need help with what to change to accomplish this
-
-## Discord
-
-[Discord](https://discord.gg/wN7uxEVHRK)
-
-## Support
-
-buymeacoffee.com/datawhores
-
-BTC: bc1qcnnetrgmtr86rmqvukl2e24f5upghpcsqqsy87
 
 ETH: 0x1d427a6E336edF6D95e589C16cb740A1372F6609
 
