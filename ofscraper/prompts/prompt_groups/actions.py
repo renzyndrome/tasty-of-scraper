@@ -31,7 +31,8 @@ def action_prompt() -> int:
         stats.get_earnings_all(username)
         stats.get_reach_guest(username)
         stats.get_reach_user(username)
-        stats.get_subs_fans_all(username)
+        # stats.get_subs_fans_all(username)
+        stats.get_subs_fans_earnings(username)
         stats.get_subs_fans_new(username)
         log.info("Finished downloading the statistics, please check the sheet")
         return True

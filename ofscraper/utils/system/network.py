@@ -46,15 +46,15 @@ def check_cdm():
                             "[yellow]WARNING:Make sure you have all the correct settings for choosen cdm\nhttps://of-scraper.gitbook.io/of-scraper/cdm-options\n\n[/yellow]"
                         )
                         return True
-                    else:
-                        console.print(
-                            "[red]CDM return an error\nThis may cause a lot of failed downloads\n consider switching\nhttps://of-scraper.gitbook.io/of-scraper/cdm-options\n\n[/red]"
-                        )
-                        log.debug(f"[bold] cdm status[/bold]: {r.status}")
-                        log.debug(f"[bold]  cdm text [/bold]: {r.text_()}")
-                        log.debug(f"[bold]  cdm headers [/bold]: {r.headers}")
-                        time.sleep(3.5)
-                        return False
+                    # else:
+                    #     console.print(
+                    #         "[red]CDM return an error\nThis may cause a lot of failed downloads\n consider switching\nhttps://of-scraper.gitbook.io/of-scraper/cdm-options\n\n[/red]"
+                    #     )
+                    #     log.debug(f"[bold] cdm status[/bold]: {r.status}")
+                    #     log.debug(f"[bold]  cdm text [/bold]: {r.text_()}")
+                    #     log.debug(f"[bold]  cdm headers [/bold]: {r.headers}")
+                    #     time.sleep(3.5)
+                    #     return False
         except httpx.TimeoutException:
             console.print(
                 f"[red]CDM service {keymode} timed out and seems to be down\nThis may cause a lot of failed downloads\nPlease confirm by checking the url:{url}\n Consider switching\nhttps://of-scraper.gitbook.io/of-scraper/cdm-options\n\n[/red]"

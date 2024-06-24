@@ -1,9 +1,10 @@
 mainPromptChoices = {
-    "Perform Action(s)": "action",
-    "Edit auth.json file": "auth",
-    "Edit config.json file": "config",
-    "Edit Profile": "profile",
-    "Merge Databases": "merge",
+    # "Perform Action(s)": "action",
+    "Download Statistics": "statistics",
+    "Edit Cookies Configuration": "auth",
+    # "Edit config.json file": "config",
+    # "Edit Profile": "profile",
+    # "Merge Databases": "merge",
     "Quit": "quit",
 }
 
