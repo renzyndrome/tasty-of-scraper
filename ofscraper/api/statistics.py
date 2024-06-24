@@ -3,6 +3,8 @@ from datetime import datetime
 import logging
 import traceback
 import json
+import time
+import os
 
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
@@ -20,6 +22,25 @@ log = logging.getLogger("shared")
 client = None
 drive_service = None  # Initialize Drive API service
 sheet = None  # Sheet object to be reused
+
+header_contexts = []
+CONTEXTS_FILE = 'header_contexts.json'
+
+def load_header_contexts():
+    global header_contexts
+    if os.path.exists(CONTEXTS_FILE):
+        with open(CONTEXTS_FILE, 'r') as file:
+            header_contexts = json.load(file)
+            log.info(f"Loaded header contexts: {header_contexts}")
+    else:
+        header_contexts = []
+
+def save_header_contexts():
+    with open(CONTEXTS_FILE, 'w') as file:
+        json.dump(header_contexts, file)
+        log.info(f"Saved header contexts: {header_contexts}")
+
+load_header_contexts()
 
 def init_google_sheets():
     global client
@@ -57,16 +78,15 @@ def delete_existing_sheet(username):
         log.error(f"Error deleting existing sheet: {str(e)}")
         log.error(traceback.format_exc())
         raise e
-    
+
 def create_or_open_sheet(username):
     global sheet
     if sheet is None:
         init_google_sheets()  # Ensure client is initialized
         try:
-            delete_existing_sheet(username)  # Ensure any existing sheet is deleted
             # Attempt to open the sheet if it exists
             sheet = client.open(username)
-            log.info(f"Opened sheet '{sheet.title}' located at: {sheet.url}")
+            log.info(f"Found existing sheet '{sheet.title}' for username '{username}'. Using 3 day coverage.")
             return sheet, False
         except gspread.SpreadsheetNotFound:
             # Create a new sheet if it does not exist
@@ -85,9 +105,11 @@ def create_or_open_sheet(username):
 
             # Add headers to the new sheet
             add_sheet_headers(sheet.sheet1)
+            log.info("New sheet created. Using 180 days coverage.")
             return sheet, True
     
     return sheet, False
+
 
 def move_sheet_to_folder(sheet_id, folder_id):
     try:
@@ -114,25 +136,93 @@ def move_sheet_to_folder(sheet_id, folder_id):
         raise e
 
 def add_sheet_headers(worksheet):
-    # Add headers 'Date' and the original tab names to the worksheet
+    # Add headers 'Date' and all contexts to the worksheet
     try:
-        header_values = [['Date', 'Earnings - All', 'Reach - Guest', 'Reach - User', 'New Fans Subscription Earnings', 'New Fans Subscription Count']]
-        worksheet.update('A1:F1', header_values)  # Update cells A1 to F1 with headers
+        global header_contexts
+        header_values = [['Date'] + header_contexts]
+        worksheet.update('A1', header_values)  # Update cells starting at A1 with headers
         log.info("Added headers to the worksheet")
     except Exception as e:
         log.error(f"Error adding headers to worksheet: {str(e)}")
         log.error(traceback.format_exc())
         raise e
 
+def fetch_and_write_data(username, column_index, fetch_url, data_key, sub_key=None, context=None):
+    global header_contexts
+    sheet, is_new_sheet = create_or_open_sheet(username)
+    
+    # Detect if this is a new context added during this run
+    is_new_context = context and context not in header_contexts
+    if is_new_context:
+        header_contexts.append(context)
+        save_header_contexts()
+    
+    days = 180 if is_new_context or is_new_sheet else 3  # Use 180 days if new context or new sheet, otherwise 3 day
+
+    # Enhanced Debug Logging
+    log.info(f"Sheet status: {'New' if is_new_sheet else 'Existing'}, Context status: {'New' if is_new_context else 'Existing'}")
+    # log.info(f"Using {days} days for context: {context}")
+
+    retries = 3
+    retry_delay = 5  # seconds
+
+    for attempt in range(retries):
+        with sessionManager.sessionManager(
+            backend="httpx",
+            limit=constants.getattr("API_MAX_CONNECTION"),
+            retries=constants.getattr("API_INDVIDIUAL_NUM_TRIES"),
+            wait_min=constants.getattr("OF_MIN_WAIT_API"),
+            wait_max=constants.getattr("OF_MAX_WAIT_API"),
+            new_request_auth=True,
+        ) as c:
+            try:
+                with c.requests(fetch_url(days)) as r:
+                    data = r.json_()
+                    adjusted_chart_amount = []
+                    items = data.get(data_key, [])
+                    if sub_key:
+                        if isinstance(items, list):
+                            items = [item[sub_key] for item in items if sub_key in item]
+                        else:
+                            items = items.get(sub_key, [])
+                    
+                    for item in items:
+                        formatted_date = datetime.strptime(item['date'], '%Y-%m-%dT%H:%M:%S%z')
+                        adjusted_chart_amount.append({
+                            "date": formatted_date.strftime('%m-%d-%Y'),
+                            "count": item['count']
+                        })
+                    log.info(f"Writing {len(adjusted_chart_amount)} items to {context}.")
+                    update_headers_if_needed(sheet)
+                    write_to_sheet(username, adjusted_chart_amount, column_index)
+                    return adjusted_chart_amount
+            except Exception as E:
+                log.error(f"Error fetching data: {str(E)}")
+                log.error(traceback.format_exc())
+                if attempt < retries - 1:
+                    log.info(f"Retrying in {retry_delay} seconds...")
+                    time.sleep(retry_delay)
+                else:
+                    raise E
+
+
+def update_headers_if_needed(sheet):
+    worksheet = sheet.sheet1  # Always use the first sheet
+    current_headers = worksheet.row_values(1)
+    expected_headers = ['Date'] + header_contexts
+    
+    if current_headers != expected_headers:
+        header_values = [expected_headers]
+        worksheet.update('A1', header_values)  # Update cells starting at A1 with headers
+        log.info("Updated headers in the worksheet")
+
 def write_to_sheet(username, data, column_index):
-    log.info(f"Initiating write_to_sheet for column {column_index}")
     init_google_sheets()  # Ensure client is initialized  
     sheet, is_new_sheet = create_or_open_sheet(username)
     
     try:
         worksheet = sheet.sheet1  # Always use the first sheet
-        log.info(f"Using worksheet {worksheet.title}")
-    
+
         # Prepare the list of values to be written
         cell_values = [[item['date'], item['count']] for item in data]
         
@@ -155,55 +245,17 @@ def write_to_sheet(username, data, column_index):
         
         # Update the entire sheet with the new values
         worksheet.update('A1', current_values)
-        log.info(f"Appended data to column {column_index}")
+        log.info(f"Appended data successfully!")
     except Exception as e:
         log.error(f"Error writing data to sheet: {str(e)}")
         log.error(traceback.format_exc())
         raise e
 
-def fetch_and_write_data(username, column_index, fetch_url, data_key, sub_key=None, context=None):
-    # init_google_sheets()  
-    
-    # sheet, is_new_sheet = create_or_open_sheet(username)
-    # days = 180 if is_new_sheet else 1  # Use 180 days if new sheet, otherwise 1 day
-    # days = 180
-    days = 2
-    with sessionManager.sessionManager(
-        backend="httpx",
-        limit=constants.getattr("API_MAX_CONNECTION"),
-        retries=constants.getattr("API_INDVIDIUAL_NUM_TRIES"),
-        wait_min=constants.getattr("OF_MIN_WAIT_API"),
-        wait_max=constants.getattr("OF_MAX_WAIT_API"),
-        new_request_auth=True,
-    ) as c:
-        try:
-            with c.requests(fetch_url(days)) as r:
-                data = r.json_()
-                # adjusted_chart_amount = []
-                # items = data.get(data_key, [])
-                # if sub_key:
-                #     items = items.get(sub_key, [])
-                
-                # for item in items:
-                #     formatted_date = datetime.strptime(item['date'], '%Y-%m-%dT%H:%M:%S%z')
-                #     adjusted_chart_amount.append({
-                #         "date": formatted_date.strftime('%m-%d-%Y'),
-                #         "count": item['count']
-                #     })
-                # log.info(f"Writing {len(adjusted_chart_amount)} items to sheet.")
-                # write_to_sheet(username, adjusted_chart_amount, column_index)
-                # return adjusted_chart_amount
-                log.info(context)
-                log.info(data)
-                return data
-        except Exception as E:
-            log.error(f"Error fetching data: {str(E)}")
-            log.error(traceback.format_exc())
-            raise E
+
+
 
 def get_earnings_all(username):
-        log.info("I am here!")
-        return fetch_and_write_data(username, 1, stats_urls.generate_earnings_all_url, 'total', 'chartAmount', context="Earnings - All")
+    return fetch_and_write_data(username, 1, stats_urls.generate_earnings_all_url, 'total', 'chartAmount', context="Earnings - All")
 
 def get_earnings_tips(username):
     return fetch_and_write_data(username, 2, stats_urls.generate_earnings_tips_url, 'tips', 'chartAmount', context="Tips")
@@ -230,39 +282,7 @@ def get_subs_fans_count_renew(username):
     return fetch_and_write_data(username, 9, stats_urls.generate_subscrption_fans_count_renew_url, 'subscribes', context="Renews")
 
 def get_earnings_chargebacks(username):
-    return fetch_and_write_data(username, 10, stats_urls.generate_chargebacks_count_url, 'total', 'chartAmount', context="Chargebacks")
-
-# def get_earnings_tips():
-#     with sessionManager.sessionManager(
-#         backend="httpx",
-#         limit=constants.getattr("API_MAX_CONNECTION"),
-#         retries=constants.getattr("API_INDVIDIUAL_NUM_TRIES"),
-#         wait_min=constants.getattr("OF_MIN_WAIT_API"),
-#         wait_max=constants.getattr("OF_MAX_WAIT_API"),
-#         new_request_auth=True,
-#     ) as c:
-#         try:
-#             with c.requests(stats_urls.test_generate_earnings_url(days=30)) as r:
-#                 data = r.json_()
-#                 # adjusted_chart_amount = []
-#                 # total = data.get('total')
-#                 # items = total.get('chartAmount')
-                
-#                 # for item in items:
-#                 #     formatted_date = datetime.strptime(item['date'], '%Y-%m-%dT%H:%M:%S%z')
-#                 #     adjusted_chart_amount.append({
-#                 #         "date": formatted_date.strftime('%m-%d-%Y'),
-#                 #         "count": item['count']
-#                 #     })
-#                 # log.info(f"Writing {len(adjusted_chart_amount)} items to sheet.")
-#                 # write_to_sheet(username, adjusted_chart_amount, column_index)
-#                 log.info(data)
-#                 return data
-#         except Exception as E:
-#             log.error(f"Error fetching data: {str(E)}")
-#             log.error(traceback.format_exc())
-#             raise E
-    # return fetch_and_write_data(username, 5, stats_urls.generate_earnings_tips_url, 'generate_earnings_tips_url
+    return fetch_and_write_data(username, 10, stats_urls.generate_chargebacks_count_url, 'chartAmount', context="Chargebacks")
 
 if __name__ == "__main__":
     init_google_sheets()
