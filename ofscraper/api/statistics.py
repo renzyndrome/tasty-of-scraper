@@ -26,21 +26,28 @@ sheet = None  # Sheet object to be reused
 header_contexts = []
 CONTEXTS_FILE = 'header_contexts.json'
 
-def load_header_contexts():
+def load_header_contexts(username):
     global header_contexts
-    if os.path.exists(CONTEXTS_FILE):
-        with open(CONTEXTS_FILE, 'r') as file:
-            header_contexts = json.load(file)
-            log.info(f"Loaded header contexts: {header_contexts}")
+    contexts_file = f'header_contexts_{username}.json'
+    if os.path.exists(contexts_file):
+        try:
+            with open(contexts_file, 'r') as file:
+                header_contexts = json.load(file)
+                log.info(f"Loaded header contexts for username '{username}': {header_contexts}")
+        except json.JSONDecodeError as e:
+            log.error(f"Error decoding JSON from file '{contexts_file}': {str(e)}")
+            header_contexts = []  # Handle this case appropriately
     else:
         header_contexts = []
 
-def save_header_contexts():
-    with open(CONTEXTS_FILE, 'w') as file:
-        json.dump(header_contexts, file)
-        log.info(f"Saved header contexts: {header_contexts}")
 
-load_header_contexts()
+def save_header_contexts(username):
+    contexts_file = f'header_contexts_{username}.json'
+    with open(contexts_file, 'w') as file:
+        json.dump(header_contexts, file)
+        log.info(f"Saved header contexts for username '{username}': {header_contexts}")
+
+
 
 def init_google_sheets():
     global client
@@ -149,13 +156,14 @@ def add_sheet_headers(worksheet):
 
 def fetch_and_write_data(username, column_index, fetch_url, data_key, sub_key=None, context=None):
     global header_contexts
+    load_header_contexts(username)
     sheet, is_new_sheet = create_or_open_sheet(username)
     
     # Detect if this is a new context added during this run
     is_new_context = context and context not in header_contexts
     if is_new_context:
         header_contexts.append(context)
-        save_header_contexts()
+        save_header_contexts(username)
     
     days = 180 if is_new_context or is_new_sheet else 3  # Use 180 days if new context or new sheet, otherwise 3 day
 
