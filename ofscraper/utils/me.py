@@ -20,3 +20,7 @@ def print_user(name, username):
     profile = me.scrape_user()
     with stdout.lowstdout():
         Console().print(f"Welcome, {name} | {username}")
+
+def get_username():
+    profile = me.scrape_user() 
+    return profile["username"]

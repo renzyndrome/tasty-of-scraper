@@ -35,6 +35,7 @@ def main_menu_action():
         if result_main_prompt == "statistics":
             name, username = me_util.parse_user()
             me_util.print_user(name, username)
+            username = name
             # log.info("Getting statistics")
 
             stats.get_earnings_all(username)

@@ -26,13 +26,14 @@ sheet = None  # Sheet object to be reused
 header_contexts = []
 CONTEXTS_FILE = 'header_contexts.json'
 
+
 def load_header_contexts(username):
     global header_contexts
     contexts_file = f'header_contexts_{username}.json'
     if os.path.exists(contexts_file):
         try:
             with open(contexts_file, 'r') as file:
-                header_contexts = json.load(file)
+                header_contexts = json.load(file).get('contexts', [])
                 log.info(f"Loaded header contexts for username '{username}': {header_contexts}")
         except json.JSONDecodeError as e:
             log.error(f"Error decoding JSON from file '{contexts_file}': {str(e)}")
@@ -41,12 +42,12 @@ def load_header_contexts(username):
         header_contexts = []
 
 
-def save_header_contexts(username):
+def save_header_contexts(username, sheet_id):
     contexts_file = f'header_contexts_{username}.json'
     with open(contexts_file, 'w') as file:
-        json.dump(header_contexts, file)
-        log.info(f"Saved header contexts for username '{username}': {header_contexts}")
-
+        json.dump({'contexts': header_contexts, 'sheet_id': sheet_id}, file)
+        log.info(f"Saved header contexts with sheet ID '{
+                 sheet_id}' for username '{username}'")
 
 
 def init_google_sheets():
@@ -91,6 +92,21 @@ def create_or_open_sheet(username):
     if sheet is None:
         init_google_sheets()  # Ensure client is initialized
         try:
+            # Load header contexts from file
+            load_header_contexts(username)
+
+            # Check if there's an existing sheet ID in the loaded contexts
+            contexts_file = f'header_contexts_{username}.json'
+            if os.path.exists(contexts_file):
+                with open(contexts_file, 'r') as file:
+                    existing_contexts = json.load(file)
+                    if 'sheet_id' in existing_contexts:
+                        sheet_id = existing_contexts['sheet_id']
+                        sheet = client.open_by_key(sheet_id)
+                        log.info(f"Opened existing sheet '{sheet.title}' with ID '{
+                                 sheet_id}' for username '{username}'")
+                        return sheet, False
+
             # Attempt to open the sheet if it exists
             sheet = client.open(username)
             log.info(f"Found existing sheet '{sheet.title}' for username '{username}'. Using 3 day coverage.")
@@ -113,9 +129,14 @@ def create_or_open_sheet(username):
             # Add headers to the new sheet
             add_sheet_headers(sheet.sheet1)
             log.info("New sheet created. Using 180 days coverage.")
+
+            # Save the sheet ID to the contexts file
+            save_header_contexts(username, sheet.id)
+
             return sheet, True
-    
+
     return sheet, False
+
 
 
 def move_sheet_to_folder(sheet_id, folder_id):
@@ -154,6 +175,13 @@ def add_sheet_headers(worksheet):
         log.error(traceback.format_exc())
         raise e
 
+
+class DateTimeEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, datetime):
+            return o.isoformat()
+        return super().default(o)
+
 def fetch_and_write_data(username, column_index, fetch_url, data_key, sub_key=None, context=None):
     global header_contexts
     load_header_contexts(username)
@@ -163,13 +191,13 @@ def fetch_and_write_data(username, column_index, fetch_url, data_key, sub_key=No
     is_new_context = context and context not in header_contexts
     if is_new_context:
         header_contexts.append(context)
-        save_header_contexts(username)
-    
-    days = 180 if is_new_context or is_new_sheet else 3  # Use 180 days if new context or new sheet, otherwise 3 day
+        # Save updated contexts including sheet ID
+        save_header_contexts(username, sheet.id)
 
-    # Enhanced Debug Logging
-    log.info(f"Sheet status: {'New' if is_new_sheet else 'Existing'}, Context status: {'New' if is_new_context else 'Existing'}")
-    # log.info(f"Using {days} days for context: {context}")
+    days = 180 if is_new_context or is_new_sheet else 3  # Use 180 days if new context or new sheet, otherwise 3 day
+    # days = 2
+    log.info(f"Sheet status: {'New' if is_new_sheet else 'Existing'}, Context status: {
+             'New' if is_new_context else 'Existing'}")
 
     retries = 3
     retry_delay = 5  # seconds
@@ -196,10 +224,17 @@ def fetch_and_write_data(username, column_index, fetch_url, data_key, sub_key=No
                     
                     for item in items:
                         formatted_date = datetime.strptime(item['date'], '%Y-%m-%dT%H:%M:%S%z')
+                        if context == "Earning - All":
+                            count_with_currency = f"${item['count']}"
+                        else:
+                            count_with_currency = item['count']
                         adjusted_chart_amount.append({
                             "date": formatted_date.strftime('%m-%d-%Y'),
-                            "count": item['count']
+                            "count": count_with_currency
                         })
+
+                    adjusted_chart_amount.sort(
+                        key=lambda x: x['date'], reverse=True)
                     log.info(f"Writing {len(adjusted_chart_amount)} items to {context}.")
                     update_headers_if_needed(sheet)
                     write_to_sheet(username, adjusted_chart_amount, column_index)
@@ -212,7 +247,6 @@ def fetch_and_write_data(username, column_index, fetch_url, data_key, sub_key=No
                     time.sleep(retry_delay)
                 else:
                     raise E
-
 
 def update_headers_if_needed(sheet):
     worksheet = sheet.sheet1  # Always use the first sheet
