@@ -1,8 +1,20 @@
 import re
+import logging
+import json
 
+log = logging.getLogger("shared")
 
 def get_session(auth):
     val = None
+    # log.info(auth)
+    # print("printing auth")
+    if isinstance(auth, str):
+        try:
+            auth = json.loads(auth)  # Convert string to dictionary
+        except json.JSONDecodeError as e:
+            log.error(f"Error decoding auth JSON: {e}")
+            return None  # Handle JSON decoding error gracefully
+    # print(auth)
     if auth.get("sess"):
         val = auth.get("sess")
     cookie = auth.get("auth", {}).get("cookie") or auth.get("cookie")

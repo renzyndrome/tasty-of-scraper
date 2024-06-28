@@ -212,6 +212,8 @@ def xbc_prompt(xbc):
     )
     return questions[name]
 
+import logging
+log = logging.getLogger("shared")
 
 def auth_full_paste():
     name = "input"
@@ -230,6 +232,8 @@ Cookie Helper Repo:https://github.com/M-rcus/OnlyFans-Cookie-Helper
             }
         ]
     )
+    log.info("I am pasted")
+    log.info(name)
     return questions[name]["auth"]
 
 

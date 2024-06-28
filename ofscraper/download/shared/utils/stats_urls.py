@@ -1,12 +1,12 @@
 from datetime import datetime, timedelta
 from urllib.parse import urlencode, quote
 
-def generate_earnings_url():
+def generate_earnings_all_url(days=1):
     base_url = "https://onlyfans.com/api2/v2/earnings/chart?"
     
     # Calculate date range
     end_date = datetime.now()
-    start_date = end_date - timedelta(days=30)
+    start_date = end_date - timedelta(days=days)
     
     # Format dates for URL
     date_format = "%Y-%m-%d %H:%M:%S"
@@ -48,15 +48,57 @@ def generate_earnings_url():
     
     return full_url
 
+def generate_earnings_tips_url(days=1):
+    base_url = "https://onlyfans.com/api2/v2/earnings/chart?"
+    
+    # Calculate date range
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=days)
+    
+    # Format dates for URL
+    date_format = "%Y-%m-%d %H:%M:%S"
+    params = {
+        'startDate': start_date.strftime(date_format),
+        'endDate': end_date.strftime(date_format),
+        'withTotal': 'true',
+        'filter[tips_amount]': 'tips_amount',
+      
+    }
+    
+    # Encode parameters and create full URL
+    url_encoded_params = urlencode(params, quote_via=lambda s, safe, encoding=None, errors=None: quote(s, safe=''))
+    full_url = base_url + url_encoded_params
+    
+    return full_url
 
-def generate_reach_guest_url(start_date=None, end_date=None):
+def generate_chargebacks_url(days=1):
+    base_url = "https://onlyfans.com/api2/v2/earnings/chart?"
+    
+    # Calculate date range
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=days)
+    
+    # Format dates for URL
+    date_format = "%Y-%m-%d %H:%M:%S"
+    params = {
+        'startDate': start_date.strftime(date_format),
+        'endDate': end_date.strftime(date_format),
+        'withTotal': 'true',
+        'filter[chargebacks_count]': 'chargebacks_count',
+    }
+    
+    # Encode parameters and create full URL
+    url_encoded_params = urlencode(params, quote_via=lambda s, safe, encoding=None, errors=None: quote(s, safe=''))
+    full_url = base_url + url_encoded_params
+    
+    return full_url
+
+def generate_reach_guest_url(days=1):
     base_url = "https://onlyfans.com/api2/v2/users/me/profile/stats?"
     
     # Calculate date range
-    if end_date is None:
-        end_date = datetime.now()
-    if start_date is None:
-        start_date = end_date - timedelta(days=30)
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=days)
     
     # Format dates for URL
     date_format = "%Y-%m-%d %H:%M:%S"
@@ -74,14 +116,12 @@ def generate_reach_guest_url(start_date=None, end_date=None):
     return full_url
 
 
-def generate_reach_user_url(start_date=None, end_date=None):
+def generate_reach_user_url(days=1):
     base_url = "https://onlyfans.com/api2/v2/users/me/profile/stats?"
     
     # Calculate date range
-    if end_date is None:
-        end_date = datetime.now()
-    if start_date is None:
-        start_date = end_date - timedelta(days=30)
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=days)
     
     # Format dates for URL
     date_format = "%Y-%m-%dT%H:%M:%S"
@@ -98,14 +138,12 @@ def generate_reach_user_url(start_date=None, end_date=None):
     
     return full_url
 
-def generate_subscription_fans_all_url(start_date=None, end_date=None):
+def generate_subscription_fans_all_url(days=1):
     base_url = "https://onlyfans.com/api2/v2/subscriptions/subscribers/chart?"
     
     # Calculate date range
-    if end_date is None:
-        end_date = datetime.now()
-    if start_date is None:
-        start_date = end_date - timedelta(days=30)
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=days)
     
     # Format dates for URL
     date_format = "%Y-%m-%d %H:%M:%S"
@@ -122,14 +160,12 @@ def generate_subscription_fans_all_url(start_date=None, end_date=None):
     return full_url
 
 
-def generate_subscrption_fans_new_url(start_date=None, end_date=None):
+def generate_subscrption_fans_count_new_url(days=1):
     base_url = "https://onlyfans.com/api2/v2/subscriptions/subscribers/chart?"
     
     # Calculate date range
-    if end_date is None:
-        end_date = datetime.now()
-    if start_date is None:
-        start_date = end_date - timedelta(days=30)
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=days)
     
     # Format dates for URL
     date_format = "%Y-%m-%d %H:%M:%S"
@@ -138,6 +174,115 @@ def generate_subscrption_fans_new_url(start_date=None, end_date=None):
         'endDate': end_date.strftime(date_format),
         'by': 'new',
     }
+    
+    # Encode parameters and create full URL
+    url_encoded_params = urlencode(params, quote_via=lambda s, safe, encoding=None, errors=None: quote(s, safe=''))
+    full_url = base_url + url_encoded_params
+    
+    return full_url
+
+def generate_subscrption_fans_earnings_new_url(days=1):
+    base_url = "https://onlyfans.com/api2/v2/subscriptions/subscribers/chart?"
+    
+    # Calculate date range
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=days)
+    
+    # Format dates for URL
+    date_format = "%Y-%m-%d %H:%M:%S"
+    params = {
+        'startDate': start_date.strftime(date_format),
+        'endDate': end_date.strftime(date_format),
+        'by': 'new',
+    }
+    
+    # Encode parameters and create full URL
+    url_encoded_params = urlencode(params, quote_via=lambda s, safe, encoding=None, errors=None: quote(s, safe=''))
+    full_url = base_url + url_encoded_params
+    
+    return full_url
+
+def generate_subscrption_fans_all_count_url(days=1):
+    base_url = "https://onlyfans.com/api2/v2/subscriptions/subscribers/chart?"
+    
+    # Calculate date range
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=days)
+    
+    # Format dates for URL
+    date_format = "%Y-%m-%d %H:%M:%S"
+    params = {
+        'startDate': start_date.strftime(date_format),
+        'endDate': end_date.strftime(date_format),
+        'by': 'total',
+    }
+    
+    # Encode parameters and create full URL
+    url_encoded_params = urlencode(params, quote_via=lambda s, safe, encoding=None, errors=None: quote(s, safe=''))
+    full_url = base_url + url_encoded_params
+    
+    return full_url
+
+def generate_subscription_fans_all_earnings_url(days=1):
+    base_url = "https://onlyfans.com/api2/v2/subscriptions/subscribers/chart?"
+    
+    # Calculate date range
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=days)
+    
+    # Format dates for URL
+    date_format = "%Y-%m-%d %H:%M:%S"
+    params = {
+        'startDate': start_date.strftime(date_format),
+        'endDate': end_date.strftime(date_format),
+        'by': 'total',
+    }
+    
+    # Encode parameters and create full URL
+    url_encoded_params = urlencode(params, quote_via=lambda s, safe, encoding=None, errors=None: quote(s, safe=''))
+    full_url = base_url + url_encoded_params
+    
+    return full_url
+
+def generate_subscrption_fans_count_renew_url(days=1):
+    base_url = "https://onlyfans.com/api2/v2/subscriptions/subscribers/chart?"
+    
+    # Calculate date range
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=days)
+    
+    # Format dates for URL
+    date_format = "%Y-%m-%d %H:%M:%S"
+    params = {
+        'startDate': start_date.strftime(date_format),
+        'endDate': end_date.strftime(date_format),
+        'by': 'renew',
+    }
+
+    # Encode parameters and create full URL
+    url_encoded_params = urlencode(params, quote_via=lambda s, safe, encoding=None, errors=None: quote(s, safe=''))
+    full_url = base_url + url_encoded_params
+    
+    return full_url
+
+def generate_chargebacks_count_url(days=1):
+    base_url = "https://onlyfans.com/api2/v2/payouts/chargebacks/chart?"
+    
+    # Calculate date range
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=days)
+    
+    # Format dates for URL
+    date_format = "%Y-%m-%d %H:%M:%S"
+    params = {
+        'startDate': start_date.strftime(date_format),
+        'endDate': end_date.strftime(date_format),
+        'withTotal': 'true',
+        'withChart': 'true',
+        'filter[chartAmount]': 'chartAmount',
+        'filter[chartCount]': 'chartCount',
+    }
+    
     
     # Encode parameters and create full URL
     url_encoded_params = urlencode(params, quote_via=lambda s, safe, encoding=None, errors=None: quote(s, safe=''))
