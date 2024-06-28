@@ -207,7 +207,7 @@ def fetch_and_write_data(username, column_index, fetch_url, data_key, sub_key=No
         save_header_contexts(username, sheet.id)
 
     # Use 180 days if new context or new sheet, otherwise 3 day
-    days = 140 if is_new_context or is_new_sheet else 3
+    days = 180 if is_new_context or is_new_sheet else 3
     # days = 2
     log.info(f"Sheet status: {'New' if is_new_sheet else 'Existing'}, Context status: {
              'New' if is_new_context else 'Existing'}")
