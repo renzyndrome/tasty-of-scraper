@@ -97,9 +97,11 @@ def delete_existing_sheet(username):
 
 def create_or_open_sheet(username):
     global sheet
+
     if sheet is None:
         init_google_sheets()  # Ensure client is initialized
         try:
+            # delete_existing_sheet(username)
             # Load header contexts from file
             load_header_contexts(username)
 

@@ -1,4 +1,3 @@
-# import ofscraper.utils.paths.common as common_paths
 import ofscraper.utils.auth.helpers as helpers
 import tkinter as tk
 from tkinter import ttk
@@ -24,28 +23,6 @@ import os
 import pathlib
 
 log = logging.getLogger("shared")
-
-
-# def make_auth(auth=None):
-#     # helpers.authwarning(common_paths.get_auth_file())
-
-#     auth = auth_schema.auth_schema(auth or helpers.get_empty())
-
-#     for key, item in auth.items():
-#         newitem = item.strip()
-#         newitem = re.sub("^ +", "", newitem)
-#         newitem = re.sub(" +$", "", newitem)
-#         newitem = re.sub("\n+", "", newitem)
-#         auth[key] = newitem
-
-#     authFile = common_paths.get_auth_file()
-#     log.info(f"{auth}\nWriting to {authFile}", style="yellow")
-#     auth = auth_schema.auth_schema(auth)
-
-#     with open(authFile, "w") as f:
-#         f.write(json.dumps(auth, indent=4))
-
-#     return True
 
 
 def get_config_home():
@@ -111,12 +88,12 @@ class App(tk.Tk):
         # Centered Start scraping button
         self.start_button = ttk.Button(
             self, text="Start scraping", command=self.start_scraping, style="RoundedButton.TButton")
-        self.start_button.place(relx=0.5, rely=0.4, anchor=tk.CENTER)
+        self.start_button.place(relx=0.5, rely=0.35, anchor=tk.CENTER)
 
         # Loading progress bar below the button
         self.progress_bar = ttk.Progressbar(
             self, mode="indeterminate", length=200)
-        self.progress_bar.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+        self.progress_bar.place(relx=0.5, rely=0.55, anchor=tk.CENTER)
         self.progress_bar.place_forget()  # Ensure it's initially hidden
 
         # Small Edit configuration button top right
@@ -128,14 +105,24 @@ class App(tk.Tk):
         self.cookie_frame = tk.Frame(self, bg="lightblue")
         self.cookie_label = tk.Label(
             self.cookie_frame, text="Enter Cookie Details", bg="lightblue")
-        self.cookie_label.pack()
+        self.cookie_label.pack(pady=(0, 5))  # Add some padding below the label
 
         self.cookie_text = tk.Text(self.cookie_frame, height=4, width=30)
-        self.cookie_text.pack()
+        self.cookie_text.pack(pady=(0, 10))  # Add padding below the text box
+
+        # Create a frame for buttons
+        self.button_frame = tk.Frame(self.cookie_frame, bg="lightblue")
+        self.button_frame.pack(pady=(10, 0))  # Add padding above the buttons
 
         self.save_button = ttk.Button(
-            self.cookie_frame, text="Save", command=self.save_configuration, style="RoundedButton.TButton")
-        self.save_button.pack()
+            self.button_frame, text="Save", command=self.save_configuration, style="RoundedButton.TButton")
+        # Add some space between buttons
+        self.save_button.pack(side=tk.LEFT, padx=(0, 5))
+
+        self.cancel_button = ttk.Button(
+            self.button_frame, text="Cancel", command=self.cancel_configuration, style="RoundedButton.TButton")
+        self.cancel_button.pack(side=tk.LEFT)
+
         self.isEditingConfiguration = False
         self.cookie_frame.place(relx=0.5, rely=0.6, anchor=tk.CENTER)
         self.cookie_frame.place_forget()  # Ensure it's initially hidden
@@ -190,47 +177,25 @@ class App(tk.Tk):
 
     def exit_editing_configuration(self):
         self.isEditingConfiguration = False
-        self.progress_bar.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+        self.progress_bar.place(relx=0.5, rely=0.55, anchor=tk.CENTER)
 
 
     def reset_to_main_menu(self):
         self.progress_bar['value'] = 0
         self.progress_bar.place_forget()
         self.start_button.config(text="Start Scraping")
+        self.start_button.place(relx=0.5, rely=0.35, anchor=tk.CENTER)
         self.isEditingConfiguration = False
 
     def start_scraping(self):
          # Change button text and prepare progress bar
         self.start_button.config(text="Scraping...")
-        self.progress_bar.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+        self.progress_bar.place(relx=0.5, rely=0.55, anchor=tk.CENTER)
         # No need to call self.progress_bar.start() since we're manually updating the progress
 
          # Start the scraping in a new thread to keep the UI responsive
         threading.Thread(target=self.run_scraping).start()
 
-    # def start_scraping(self):
-    #     # Change button text and start progress bar
-    #     self.start_button.config(text="Scraping...")
-    #     name, username = me_util.parse_user()
-    #     me_util.print_user(name, username)
-    #     username = name
-    #     stats.get_earnings_all(username)
-    #     stats.get_earnings_tips(username)
-    #     stats.get_reach_user(username)
-    #     stats.get_reach_guest(username)
-    #     stats.get_subs_fans_count_new(username)
-    #     # stats.get_subs_fans_all(username)
-    #     stats.get_subs_fans_earnings_new(username)
-    #     stats.get_subs_fans_count_all(username)
-    #     stats.get_subs_fans_earnings_all(username)
-    #     stats.get_subs_fans_count_renew(username)
-    #     stats.get_earnings_chargebacks(username)
-    #     self.progress_bar.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
-    #     self.progress_bar.start()
-
-    #     # Placeholder for scraping logic
-    #     # Simulate scraping duration with after method
-    #     self.after(5000, self.scraping_complete)
 
     def scraping_complete(self):
         # Stop the progress bar and reset button text
@@ -239,10 +204,17 @@ class App(tk.Tk):
         self.start_button.config(text="Start scraping")
 
     def edit_configuration(self):
-        # Hide start button and show cookie frame
         self.enter_editing_configuration()
         self.start_button.place_forget()
-        self.cookie_frame.place(relx=0.5, rely=0.6, anchor=tk.CENTER)
+        self.progress_bar.place_forget()  # Ensure progress bar is hidden
+        # Centered vertically
+        self.cookie_frame.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+
+    def cancel_configuration(self):
+        self.cookie_text.delete('1.0', tk.END)  # Clear the text box
+        self.cookie_frame.place_forget()
+        self.start_button.place(relx=0.5, rely=0.4, anchor=tk.CENTER)
+        self.exit_editing_configuration()
 
     def save_configuration(self):
         # Save the cookie details (placeholder)
