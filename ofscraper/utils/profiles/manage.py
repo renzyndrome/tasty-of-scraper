@@ -21,6 +21,13 @@ currentProfile = None
 
 
 def change_profile():
+    """
+    Changes the current profile used by the application.
+    
+    This function prompts the user to select a profile from the available profiles, updates the main profile configuration setting to the selected profile, and removes the profile argument from the command-line arguments.
+    
+    After changing the profile, a success message is printed to the console.
+    """
     tools.print_profiles()
     profile = prompts.get_profile_prompt(profile_data.get_profile_names())
     config_.update_config(constants.getattr("mainProfile"), profile)

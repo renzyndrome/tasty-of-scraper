@@ -96,57 +96,54 @@ def delete_existing_sheet(username):
 
 
 def create_or_open_sheet(username):
-    global sheet
+    init_google_sheets()  # Ensure client is initialized
+    try:
+        # Load header contexts from file
+        load_header_contexts(username)
 
-    if sheet is None:
-        init_google_sheets()  # Ensure client is initialized
-        try:
-            # delete_existing_sheet(username)
-            # Load header contexts from file
-            load_header_contexts(username)
-
-            # Check if there's an existing sheet ID in the loaded contexts
-            contexts_file = f'header_contexts_{username}.json'
-            if os.path.exists(contexts_file):
-                with open(contexts_file, 'r') as file:
-                    existing_contexts = json.load(file)
-                    if 'sheet_id' in existing_contexts:
-                        sheet_id = existing_contexts['sheet_id']
+        # Check if there's an existing sheet ID in the loaded contexts
+        contexts_file = f'header_contexts_{username}.json'
+        if os.path.exists(contexts_file):
+            with open(contexts_file, 'r') as file:
+                existing_contexts = json.load(file)
+                if 'sheet_id' in existing_contexts:
+                    sheet_id = existing_contexts['sheet_id']
+                    try:
                         sheet = client.open_by_key(sheet_id)
                         log.info(f"Opened existing sheet '{sheet.title}' with ID '{
                                  sheet_id}' for username '{username}'")
                         return sheet, False
+                    except gspread.SpreadsheetNotFound:
+                        log.info(f"Sheet with ID '{
+                                 sheet_id}' not found. Creating a new sheet.")
 
-            # Attempt to open the sheet if it exists
-            sheet = client.open(username)
-            log.info(f"Found existing sheet '{sheet.title}' for username '{
-                     username}'. Using 3 day coverage.")
-            return sheet, False
-        except gspread.SpreadsheetNotFound:
-            # Create a new sheet if it does not exist
-            sheet = client.create(username)
-            log.info(f"Created new sheet '{username}'")
+        # Create a new sheet if it does not exist
+        sheet = client.create(username)
+        log.info(f"Created new sheet '{username}'")
 
-            # Move the sheet to the desired folder using Drive API
-            folder_id = '1AD0Nap0E0F0IUPfNu1Wjkckn5R68jnRA'
-            try:
-                move_sheet_to_folder(sheet.id, folder_id)
-                log.info(f"Moved sheet '{username}' to folder '{folder_id}'")
-            except Exception as e:
-                log.error(f"Error moving sheet to folder: {str(e)}")
-                log.error(traceback.format_exc())
-                raise e
+        # Move the sheet to the desired folder using Drive API
+        folder_id = '1w3fznwgphEy-AFh8lMorShNty9U-ZDxt'
+        try:
+            move_sheet_to_folder(sheet.id, folder_id)
+            log.info(f"Moved sheet '{username}' to folder '{folder_id}'")
+        except Exception as e:
+            log.error(f"Error moving sheet to folder: {str(e)}")
+            log.error(traceback.format_exc())
+            raise e
 
-            # Add headers to the new sheet
-            add_sheet_headers(sheet.sheet1)
-            log.info("New sheet created. Using 180 days coverage.")
+        # Add headers to the new sheet
+        add_sheet_headers(sheet.sheet1)
+        log.info("New sheet created. Using 180 days coverage.")
 
-            # Save the sheet ID to the contexts file
-            save_header_contexts(username, sheet.id)
+        # Save the sheet ID to the contexts file
+        save_header_contexts(username, sheet.id)
 
-            return sheet, True
+        return sheet, True
 
-    return sheet, False
+    except Exception as e:
+        log.error(f"Error creating or opening sheet: {str(e)}")
+        log.error(traceback.format_exc())
+        raise e
 
 
 def move_sheet_to_folder(sheet_id, folder_id):
@@ -259,7 +256,7 @@ def fetch_and_write_data(username, column_index, fetch_url, data_key, sub_key=No
                         f"Writing {len(adjusted_chart_amount)} items to {context}.")
                     update_headers_if_needed(sheet)
                     write_to_sheet(
-                        username, adjusted_chart_amount, column_index)
+                        username, adjusted_chart_amount, column_index, sheet)
                     return adjusted_chart_amount
             except Exception as E:
                 log.error(f"Error fetching data: {str(E)}")
@@ -283,7 +280,7 @@ def update_headers_if_needed(sheet):
         log.info("Updated headers in the worksheet")
 
 
-def write_to_sheet(username, data, column_index):
+def write_to_sheet(username, data, column_index, sheet):
     init_google_sheets()  # Ensure client is initialized
     sheet, is_new_sheet = create_or_open_sheet(username)
 

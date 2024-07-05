@@ -57,8 +57,8 @@ def get_config_path():
     return configPath
 
 
-def get_auth_file():
-    return get_profile_path() / constants_attr.getattr("authFile")
+def get_auth_file(profile_name=None):
+    return get_profile_path(profile_name) / constants_attr.getattr("authFile")
 
 
 def print_auth():
@@ -68,6 +68,39 @@ def print_auth():
     return auth_file
 
 
+# def get_all_profiles():
+#     config_home = get_config_home()
+#     profiles = []
+#     for item in os.listdir(config_home):
+#         item_path = config_home / item
+#         if item_path.is_dir() and (item_path / constants.authFile).exists():
+#             profiles.append(item)
+#     return profiles
+
+
+# def get_username_from_profile(profile):
+#     try:
+#         auth_data = helpers.get_auth_dict(profile)
+#         # Extract and return the username from auth_data
+#         # The exact implementation depends on how the username is stored in your auth file
+#         return auth_data.get('username', 'default_username')
+#     except json.JSONDecodeError:
+#         log.error(f"Error reading auth file for profile '{
+#                   profile}'. The file may be empty or contain invalid JSON.")
+#         return None
+#     except Exception as e:
+#         log.error(f"Error processing profile '{profile}': {str(e)}")
+#         return None
+
+
+# def run_statistics_for_all_profiles():
+#     profiles = get_all_profiles()
+#     print(f"Here are the profiles: {profiles}")
+#     for profile in profiles:
+#         username = get_username_from_profile(profile)
+#         print(f"Username is {username}")
+#         stats.get_earnings_all(username, profile)
+#         stats.get_earnings_tips(username, profile)
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -126,10 +159,14 @@ class App(tk.Tk):
         self.isEditingConfiguration = False
         self.cookie_frame.place(relx=0.5, rely=0.6, anchor=tk.CENTER)
         self.cookie_frame.place_forget()  # Ensure it's initially hidden
-        self.progress_bar = ttk.Progressbar(self, orient="horizontal", length=200, mode="determinate")
+        self.progress_bar = ttk.Progressbar(
+            self, orient="horizontal", length=200, mode="determinate")
         self.progress_bar.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
-
-    # def make_auth(auth=None):
+        # def make_auth(auth=None):
+        self.profiles = self.get_all_profiles()
+        self.current_profile = None
+        self.current_profile = read_args.retriveArgs(
+        ).profile or profile_data.get_current_config_profile()
 
     def start_scraping_thread(self):
         # Create and start a new thread for the scraping tasks
@@ -179,7 +216,6 @@ class App(tk.Tk):
         self.isEditingConfiguration = False
         self.progress_bar.place(relx=0.5, rely=0.55, anchor=tk.CENTER)
 
-
     def reset_to_main_menu(self):
         self.progress_bar['value'] = 0
         self.progress_bar.place_forget()
@@ -187,15 +223,70 @@ class App(tk.Tk):
         self.start_button.place(relx=0.5, rely=0.35, anchor=tk.CENTER)
         self.isEditingConfiguration = False
 
+    def get_all_profiles(self):
+        config_home = get_config_home()
+        profiles = []
+        for item in os.listdir(config_home):
+            item_path = config_home / item
+            if item_path.is_dir() and (item_path / "auth.json").exists():
+                profiles.append(item)
+        return profiles
+
+    def run_statistics_for_all_profiles(self):
+        for profile in self.profiles:
+            self.update_current_profile(profile)
+            username = self.get_username_from_profile(profile)
+            if username:
+                print(f"Scraping now for {username}")
+                self.run_statistics_for_profile(username, profile)
+            else:
+                log.warning(f"Skipping statistics for profile '{
+                            profile}' due to error.")
+
+    def run_statistics_for_profile(self, username, profile):
+        try:
+
+            stats.get_earnings_all(username)
+            stats.get_earnings_tips(username)
+            # ... (other statistics functions) ...
+            print(f"Scraping for {profile} completed.")
+        except Exception as e:
+            log.error(f"Error running statistics for profile '{
+                      profile}': {str(e)}")
+
+    def get_username_from_profile(self, profile):
+        try:
+            # auth_data = helpers.get_auth_dict(profile)
+            # return auth_data.get('username', 'default_username')
+            import ofscraper.api.me as me
+
+            # currentProfile = get_active_profile()
+            currentData = me.scrape_user()
+            # print(currentData)
+            return currentData['name']
+        except json.JSONDecodeError:
+            log.error(f"Error reading auth file for profile '{
+                      profile}'. The file may be empty or contain invalid JSON.")
+            return None
+        except Exception as e:
+            log.error(f"Error processing profile '{profile}': {str(e)}")
+            return None
+
+    def update_current_profile(self, profile_name):
+        import ofscraper.utils.config.config as config_
+        import ofscraper.utils.constants as constants
+        self.current_profile = profile_name
+        config_.update_config(constants.getattr("mainProfile"), profile_name)
+
     def start_scraping(self):
-         # Change button text and prepare progress bar
+        # Change button text and prepare progress bar
         self.start_button.config(text="Scraping...")
         self.progress_bar.place(relx=0.5, rely=0.55, anchor=tk.CENTER)
         # No need to call self.progress_bar.start() since we're manually updating the progress
-
-         # Start the scraping in a new thread to keep the UI responsive
-        threading.Thread(target=self.run_scraping).start()
-
+        # print(get_username_from_profile())
+        # Start the scraping in a new thread to keep the UI responsive
+        # threading.Thread(target=self.run_scraping).start()
+        threading.Thread(target=self.run_statistics_for_all_profiles).start()
 
     def scraping_complete(self):
         # Stop the progress bar and reset button text
