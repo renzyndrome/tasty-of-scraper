@@ -167,6 +167,12 @@ class App(tk.Tk):
         self.current_profile = None
         self.current_profile = read_args.retriveArgs(
         ).profile or profile_data.get_current_config_profile()
+        self.view_profiles_button = ttk.Button(
+            self, text="View all profiles", command=self.view_all_profiles, style="RoundedButton.TButton")
+        self.view_profiles_button.place(relx=0.9, rely=0.2, anchor=tk.NE)
+        self.edit_cookies_button = ttk.Button(
+            self, text="Edit Cookies", command=self.edit_cookies, style="RoundedButton.TButton")
+        self.edit_cookies_button.place(relx=0.9, rely=0.3, anchor=tk.NE)
 
     def start_scraping_thread(self):
         # Create and start a new thread for the scraping tasks
@@ -232,6 +238,68 @@ class App(tk.Tk):
                 profiles.append(item)
         return profiles
 
+    def view_all_profiles(self):
+        profiles = self.get_all_profiles()
+        profile_window = tk.Toplevel(self)
+        profile_window.title("All Profiles")
+        profile_window.geometry("300x200")
+
+        listbox = tk.Listbox(profile_window)
+        listbox.pack(expand=True, fill=tk.BOTH)
+
+        for profile in profiles:
+            listbox.insert(tk.END, profile)
+
+    def edit_cookies(self):
+        profiles = self.get_all_profiles()
+
+        profile_window = tk.Toplevel(self)
+        profile_window.title("Select Profile")
+        profile_window.geometry("300x200")
+
+        listbox = tk.Listbox(profile_window)
+        listbox.pack(expand=True, fill=tk.BOTH)
+
+        for profile in profiles:
+            listbox.insert(tk.END, profile)
+
+        def on_profile_select(event):
+            selected_profile = listbox.get(listbox.curselection())
+            profile_window.destroy()
+            self.edit_profile_configuration(selected_profile)
+
+        listbox.bind('<<ListboxSelect>>', on_profile_select)
+
+    def edit_profile_configuration(self, profile):
+        self.enter_editing_configuration()
+        self.start_button.place_forget()
+        self.progress_bar.place_forget()
+        self.cookie_frame.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+
+        auth_file = get_auth_file(profile)
+        with open(auth_file, 'r') as f:
+            auth_data = json.load(f)
+
+        self.cookie_text.delete('1.0', tk.END)
+        self.cookie_text.insert(tk.END, json.dumps(auth_data, indent=4))
+
+        def save_profile_configuration():
+            cookie_details = self.cookie_text.get("1.0", tk.END).strip()
+            try:
+                auth_data = json.loads(cookie_details)
+                with open(auth_file, 'w') as f:
+                    json.dump(auth_data, f, indent=4)
+                self.cookie_frame.place_forget()
+                self.start_button.place(relx=0.5, rely=0.4, anchor=tk.CENTER)
+                self.exit_editing_configuration()
+                tk.messagebox.showinfo("Success", f"Cookies for {
+                                       profile} updated successfully!")
+            except json.JSONDecodeError:
+                tk.messagebox.showerror("Error", "Invalid JSON format")
+
+        self.save_button.config(command=save_profile_configuration)
+
+
     def run_statistics_for_all_profiles(self):
         for profile in self.profiles:
             self.update_current_profile(profile)
@@ -287,6 +355,10 @@ class App(tk.Tk):
         # Start the scraping in a new thread to keep the UI responsive
         # threading.Thread(target=self.run_scraping).start()
         threading.Thread(target=self.run_statistics_for_all_profiles).start()
+
+    def start_scraping_silent(self):
+        threading.Thread(target=self.run_statistics_for_all_profiles).start()
+
 
     def scraping_complete(self):
         # Stop the progress bar and reset button text
