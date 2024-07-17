@@ -1,6 +1,7 @@
 import ofscraper.utils.auth.helpers as helpers
 import tkinter as tk
 from tkinter import ttk
+from tkinter import messagebox
 import ofscraper.api.statistics as stats
 from ofscraper.utils.me import get_username
 import ofscraper.utils.auth.schema as auth_schema
@@ -117,7 +118,9 @@ class App(tk.Tk):
                         padding=6)
         style.map("RoundedButton.TButton",
                   relief=[("active", "groove"), ("pressed", "sunken")])
-
+        # Create a frame for the toolbar
+        self.toolbar = tk.Frame(self, bg="lightblue")
+        self.toolbar.pack(side=tk.TOP, anchor=tk.NW, padx=10, pady=10)
         # Centered Start scraping button
         self.start_button = ttk.Button(
             self, text="Start scraping", command=self.start_scraping, style="RoundedButton.TButton")
@@ -130,9 +133,9 @@ class App(tk.Tk):
         self.progress_bar.place_forget()  # Ensure it's initially hidden
 
         # Small Edit configuration button top right
-        self.edit_button = ttk.Button(
-            self, text="Edit configuration", command=self.edit_configuration, style="RoundedButton.TButton")
-        self.edit_button.place(relx=0.9, rely=0.1, anchor=tk.NE)
+        # self.edit_button = ttk.Button(
+        #     self, text="Edit configuration", command=self.edit_configuration, style="RoundedButton.TButton")
+        # self.edit_button.place(relx=0.9, rely=0.1, anchor=tk.NE)
 
         # Hidden textbox for entering cookie details
         self.cookie_frame = tk.Frame(self, bg="lightblue")
@@ -167,12 +170,24 @@ class App(tk.Tk):
         self.current_profile = None
         self.current_profile = read_args.retriveArgs(
         ).profile or profile_data.get_current_config_profile()
-        self.view_profiles_button = ttk.Button(
-            self, text="View all profiles", command=self.view_all_profiles, style="RoundedButton.TButton")
-        self.view_profiles_button.place(relx=0.9, rely=0.2, anchor=tk.NE)
+        # self.view_profiles_button = ttk.Button(
+        #     self, text="View all profiles", command=self.view_all_profiles, style="RoundedButton.TButton")
+        # self.view_profiles_button.place(relx=0.9, rely=0.2, anchor=tk.NE)
+        # Edit Cookies button
+        # Edit Cookies button
         self.edit_cookies_button = ttk.Button(
-            self, text="Edit Cookies", command=self.edit_cookies, style="RoundedButton.TButton")
-        self.edit_cookies_button.place(relx=0.9, rely=0.3, anchor=tk.NE)
+            self.toolbar, text="View Profiles", command=self.edit_cookies, style="RoundedButton.TButton")
+        self.edit_cookies_button.pack(side=tk.LEFT, padx=5)
+
+        # Create Profile button
+        self.create_profile_button = ttk.Button(
+            self.toolbar, text="Create Profile", command=self.create_profile, style="RoundedButton.TButton")
+        self.create_profile_button.pack(side=tk.LEFT, padx=5)
+        # Loading progress bar below the toolbar
+        # self.progress_bar = ttk.Progressbar(
+        #     self, mode="indeterminate", length=380)
+        # self.progress_bar.pack(pady=10)
+        # self.progress_bar.pack_forget()
 
     def start_scraping_thread(self):
         # Create and start a new thread for the scraping tasks
@@ -287,18 +302,40 @@ class App(tk.Tk):
             cookie_details = self.cookie_text.get("1.0", tk.END).strip()
             try:
                 auth_data = json.loads(cookie_details)
+                formatted_auth_data = self.format_cookie_json(auth_data)
                 with open(auth_file, 'w') as f:
-                    json.dump(auth_data, f, indent=4)
+                    json.dump(formatted_auth_data, f, indent=4)
                 self.cookie_frame.place_forget()
                 self.start_button.place(relx=0.5, rely=0.4, anchor=tk.CENTER)
                 self.exit_editing_configuration()
-                tk.messagebox.showinfo("Success", f"Cookies for {
-                                       profile} updated successfully!")
+                messagebox.showinfo("Success", f"Cookies for {
+                    profile} updated successfully!")
             except json.JSONDecodeError:
-                tk.messagebox.showerror("Error", "Invalid JSON format")
+                messagebox.showerror("Error", "Invalid JSON format")
 
         self.save_button.config(command=save_profile_configuration)
 
+    def format_cookie_json(self, auth_data):
+        # Extract and format the cookie data as needed
+        # This is based on your existing save_configuration method
+        cookie_string = auth_data["auth"]["cookie"]
+        cookie_pairs = cookie_string.split(';')
+
+        formatted_data = {
+            "sess": "",
+            "auth_id": "",
+            "auth_uid": "",
+            "user_agent": auth_data["auth"]["user_agent"],
+            "x-bc": auth_data["auth"]["x_bc"]
+        }
+
+        for pair in cookie_pairs:
+            key_value = pair.strip().split('=')
+            key = key_value[0].strip()
+            if key in ["sess", "auth_id", "auth_uid"]:
+                formatted_data[key] = key_value[1].strip()
+
+        return formatted_data
 
     def run_statistics_for_all_profiles(self):
         for profile in self.profiles:
@@ -349,6 +386,7 @@ class App(tk.Tk):
     def start_scraping(self):
         # Change button text and prepare progress bar
         self.start_button.config(text="Scraping...")
+        self.progress_bar.pack(pady=10)  # Show the progress bar
         self.progress_bar.place(relx=0.5, rely=0.55, anchor=tk.CENTER)
         # No need to call self.progress_bar.start() since we're manually updating the progress
         # print(get_username_from_profile())
@@ -359,10 +397,11 @@ class App(tk.Tk):
     def start_scraping_silent(self):
         threading.Thread(target=self.run_statistics_for_all_profiles).start()
 
-
     def scraping_complete(self):
         # Stop the progress bar and reset button text
         self.progress_bar.stop()
+        # Stop the progress bar and reset button text
+        self.progress_bar.pack_forget()
         self.progress_bar.place_forget()
         self.start_button.config(text="Start scraping")
 
@@ -448,6 +487,79 @@ class App(tk.Tk):
         self.cookie_frame.place_forget()
         self.start_button.place(relx=0.5, rely=0.4, anchor=tk.CENTER)
         self.exit_editing_configuration()
+
+    def create_profile_dups(self):
+        from ofscraper.utils.paths import manage
+
+        create_window = tk.Toplevel(self)
+        create_window.title("Create New Profile")
+        create_window.geometry("300x150")
+
+        tk.Label(create_window, text="Enter new profile name:").pack(pady=10)
+        name_entry = tk.Entry(create_window, width=30)
+        name_entry.pack(pady=10)
+
+        def submit_profile():
+            import ofscraper.utils.profiles.tools as tools
+            new_profile_name = name_entry.get().strip()
+            if new_profile_name:
+                modified_name = name = tools.profile_name_fixer(
+                    new_profile_name)
+                manage.create_profile_path(modified_name)
+                messagebox.showinfo("Success", f"Profile '{
+                                    new_profile_name}' created successfully!")
+                self.profiles = self.get_all_profiles()  # Refresh the profiles list
+                create_window.destroy()
+            else:
+                messagebox.showerror("Error", "Profile name cannot be empty")
+
+        submit_button = ttk.Button(
+            create_window, text="Create", command=submit_profile)
+        submit_button.pack(pady=10)
+
+    def create_profile(self):
+        from ofscraper.utils.paths import manage
+        import json
+        import os
+
+        create_window = tk.Toplevel(self)
+        create_window.title("Create New Profile")
+        create_window.geometry("300x150")
+
+        tk.Label(create_window, text="Enter new profile name:").pack(pady=10)
+        name_entry = tk.Entry(create_window, width=30)
+        name_entry.pack(pady=10)
+
+        def submit_profile():
+            import ofscraper.utils.profiles.tools as tools
+            new_profile_name = name_entry.get().strip()
+            if new_profile_name:
+                modified_name = name = tools.profile_name_fixer(
+                    new_profile_name)
+                new_profile = manage.create_profile_path(modified_name)
+                # Create auth.json file
+                auth_file_path = os.path.join(
+                    get_profile_path(new_profile), 'auth.json')
+                initial_auth_data = {
+                    "sess": "",
+                    "auth_id": "",
+                    "auth_uid": "",
+                    "user_agent": "",
+                    "x-bc": ""
+                }
+                with open(auth_file_path, 'w') as f:
+                    json.dump(initial_auth_data, f, indent=4)
+
+                messagebox.showinfo("Success", f"Profile '{
+                                    new_profile_name}' created successfully with auth.json!")
+                self.profiles = self.get_all_profiles()  # Refresh the profiles list
+                create_window.destroy()
+            else:
+                messagebox.showerror("Error", "Profile name cannot be empty")
+
+        submit_button = ttk.Button(
+            create_window, text="Create", command=submit_profile)
+        submit_button.pack(pady=10)
 
 
 if __name__ == "__main__":
