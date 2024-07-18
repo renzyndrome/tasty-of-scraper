@@ -56,18 +56,18 @@ def main_menu_action():
             # log.info(stats.get_earnings_tips())
             log.info("Finished downloading the statistics, please check the sheet")
             return True
-        # else result_main_prompt == "action":
-        #     action_result_prompt = prompts.action_prompt()
-        #     if action_result_prompt == "quit":
-        #         return True
-        #     elif action_result_prompt == "main":
-        #         continue
-        #     else:
-        #         count > 0 and reset_menu_helper()
-        #         actions.set_scrape_paid()
-        #         functs = process_actions.add_selected_areas()
-        #         run.run_helper(*functs)
-        #         count = count + 1
+        elif result_main_prompt == "action":
+            action_result_prompt = prompts.action_prompt()
+            if action_result_prompt == "quit":
+                return True
+            elif action_result_prompt == "main":
+                continue
+            else:
+                count > 0 and reset_menu_helper()
+                actions.set_scrape_paid()
+                functs = process_actions.add_selected_areas()
+                run.run_helper(*functs)
+                count = count + 1
         elif result_main_prompt == "auth":
             # Edit `auth.json` file
             auth_result_prompt = auth_file.edit_auth()

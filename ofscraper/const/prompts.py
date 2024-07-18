@@ -3,7 +3,7 @@ mainPromptChoices = {
     "Download Statistics": "statistics",
     "Edit Cookies Configuration": "auth",
     # "Edit config.json file": "config",
-    # "Edit Profile": "profile",
+    "Edit Profile": "profile",
     # "Merge Databases": "merge",
     "Quit": "quit",
 }
