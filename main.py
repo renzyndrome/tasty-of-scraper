@@ -24,7 +24,10 @@ import logging
 import re
 import os
 import pathlib
+import sys
 from datetime import datetime, timedelta
+
+sys.stdout.reconfigure(encoding='utf-8')
 
 log = logging.getLogger("shared")
 
@@ -359,7 +362,11 @@ class App(tk.Tk):
             self.update_current_profile(profile)
             username = self.get_username_from_profile(profile)
             if username:
-                print(f"Scraping now for {username}")
+                try:
+                    print(f"Scraping now for {username}")
+                except UnicodeEncodeError:
+                    print(f"Scraping now for {username.encode(
+                        'ascii', 'ignore').decode('ascii')}")
                 self.run_statistics_for_profile(username, profile)
             else:
                 log.warning(f"Skipping statistics for profile '{
