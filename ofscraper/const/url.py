@@ -75,3 +75,4 @@ listEP = "https://onlyfans.com/api2/v2/lists?offset={}&skip_users=all&limit=100&
 listusersEP = (
     "https://onlyfans.com/api2/v2/lists/{}/users?offset={}&limit=100&format=infinite"
 )
+vaultEP = "https://onlyfans.com/api2/v2/vault/lists?view=main&offset=0&limit=10"
